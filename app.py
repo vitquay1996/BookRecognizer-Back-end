@@ -1,6 +1,7 @@
 from flask import Flask, request, Response
 import os
 import jsonpickle
+import helper
 
 UPLOAD_FOLDER = './images'
 
@@ -21,15 +22,24 @@ def upload():
     file = request.files['file']
     filename = file.filename
     print(filename)
-    file.save(os.path.join(app.config['UPLOAD_FOLDER'], "default.jpeg"))
+    save_path = os.path.join(app.config['UPLOAD_FOLDER'], "default.jpeg")
+    file.save(save_path)
     # convert string of image data to uint8
     # nparr = np.fromstring(r.data, np.uint8)
     # decode image
     # img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
+    # call function from helper to retrieve isbn
+    isbn_number = helper.get_isbn_from_image(save_path)
+    print("ISBN Number: {}".format(isbn_number))
+    """
+    # for debugging
     response = {'message': 'image received',
                 'books': ['0439136369','0439785960','0439064872','0439064872']
                 }
-                
+    """
+    response = {
+        'message': 'image received',
+        'books': [isbn_number],
+        }
     response_pickled = jsonpickle.encode(response)
     return Response(response=response_pickled, status=200, mimetype="application/json")
