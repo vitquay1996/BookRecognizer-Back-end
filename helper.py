@@ -26,16 +26,37 @@ def get_isbn_from_image(img_path):
 
 	driver = webdriver.Chrome(chrome_options=chrome_options)
 	driver.get('https://images.google.com/')
-	search_buttons = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('gsst_a'))
-	print(search_buttons)
+	try:
+		search_buttons = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('gsst_a'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to retrieve image search button from Google Image')
+		raise
+	
 	search_image_button = search_buttons[0]
-	search_image_button.click()
-	file_upload = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('qbfile'))
+	
+	try:
+		search_image_button.click()
+	except selenium.common.exceptions.ElementClickInterceptedException:
+		print('Fail to click the image search button from Google Image')
+		raise
+	
+	try:
+		file_upload = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('qbfile'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to locate the upload photo button on the Google Image Search site even after image search button is clicked')
+		raise
+	
+	# probably no error here ...
 	file_upload.send_keys(
 		os.path.abspath(img_path)
 		)
 	# retrieve search results
-	search_results = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('r'))
+	try:
+		search_results = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('r'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to see any search result after pasting image in Google Image Search bar')
+		raise
+	
 	print("There are {} search results!".format(len(search_results)))
 	print("Printing search results:")
 	search_len = len(search_results)
@@ -60,22 +81,43 @@ def get_isbn_from_image(img_path):
 	print('Best name: {}'.format(best_name))
 	# revisit google and search this instead
 	driver.get('https://www.google.com/xhtml')
-	search_form = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_name('q'))
+	try:
+		search_form = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_name('q'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to retrieve search form from Google Search page')
+		raise
+	
 	search_form.send_keys(best_name + ' goodreads review')
 	search_form.submit()
-	search_results = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('r'))
+	try:
+		search_results = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('r'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to see any search result when book name is pasted into google text search')
+		raise
 	print("There are {} search results!".format(len(search_results)))
 	print("Printing search results:")
 	for res in search_results:
 		print(res.text)
 	# click goodread link
 	gr = search_results[0]
-	gr.click()
+	try:
+		gr.click()
+	except selenium.common.exceptions.ElementClickInterceptedException:
+		print('Fail to click top search result of google text search')
+		raise
 	# click show data button
-	show_data_button = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('bookDataBoxShow'))
+	try:
+		show_data_button = WebDriverWait(driver, 10).until(lambda x: x.find_element_by_id('bookDataBoxShow'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to load show data button on goodreads')
+		raise
 	driver.execute_script('document.getElementById(\'bookDataBoxShow\').click()')
 	# find isbn
-	isbns = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('infoBoxRowItem'))
+	try:
+		isbns = WebDriverWait(driver, 10).until(lambda x: x.find_elements_by_class_name('infoBoxRowItem'))
+	except selenium.common.exceptions.TimeoutException:
+		print('Fail to see any element with the class name for ISBN element on goodreads')
+		raise
 	isbn_number = '-1'
 	for isbn in isbns:
 		elem_content = isbn.text
@@ -86,5 +128,7 @@ def get_isbn_from_image(img_path):
 			isbn_number = elem_content
 			break
 	print('ISBN number: {}'.format(isbn_number))
+	if isbn_number == '-1':
+		print('No valid ISBN number retrieved. Returning intentional invalid value -1...')
 	driver.quit()
 	return isbn_number
